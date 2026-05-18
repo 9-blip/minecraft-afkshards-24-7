@@ -1,2 +1,3 @@
 # minecraft-afkshards-24-7
-afk shards in smp ! nigger 
+afk shards in smp ! 
+# cracked only
