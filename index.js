@@ -5,10 +5,10 @@ const http = require('http');
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Minecraft Brute-Force TPA Bots are Online!\n');
+  res.end('Minecraft Chat-Activated AFK Bots are Online!\n');
 }).listen(PORT, () => console.log(`[System] Dummy server on port ${PORT}`));
 
-// 2. HARDCODED TARGET ACCOUNT
+// 2. HARDCODED TARGET ACCOUNT (Must match exactly)
 const BOSS_NAME = 'Zzynox_'; 
 
 // 3. ENVIRONMENT CONFIGURATION
@@ -34,37 +34,14 @@ function spawnAFKBot(account) {
     auth: 'offline'
   });
 
-  let tpaLoop = null; 
   bot.isTeleporting = false; 
 
   bot.once('spawn', () => {
-    console.log(`[${account.username}] Connected to server network. Initiating login...`);
-    
+    console.log(`[${account.username}] Connected to server network.`);
     setTimeout(() => {
-      // Step 1: Run the authentication command
       bot.chat(`/login ${account.password}`);
-      console.log(`[${account.username}] Sent /login credentials.`);
-      
-      // Step 2: WAIT 4 SECONDS FOR WORLD LIFTOFF / LOBBY SWITCH
-      setTimeout(() => {
-        if (bot.isTeleporting) return;
-        
-        console.log(`[${account.username}] Lobby transition cleared. Launching TPA loop to ${BOSS_NAME}...`);
-        
-        // Fire the initial TPA request immediately
-        bot.chat(`/tpa ${BOSS_NAME}`);
-        
-        // Keep checking and resending every 10 seconds until accepted
-        tpaLoop = setInterval(() => {
-          if (!bot.isTeleporting) {
-            console.log(`[${account.username}] Executing recurring TPA push...`);
-            bot.chat(`/tpa ${BOSS_NAME}`);
-          }
-        }, 10000);
-
-      }, 4000); // 4000ms safety buffer post-login
-
-    }, 2000); // Initial connection buffer
+      console.log(`[${account.username}] Sent /login credentials. Standing by for chat orders...`);
+    }, 2000);
   });
 
   // Anti-AFK Swing Timer (runs every 30 seconds if not frozen)
@@ -72,51 +49,57 @@ function spawnAFKBot(account) {
     if (bot.entity && !bot.isTeleporting) bot.swingArm('right');
   }, 30000);
 
-  // CHAT SCANNER AND EVENT SYSTEM
-  bot.on('message', (jsonMsg) => {
-    const serverMessage = jsonMsg.toString().toLowerCase();
-    const targetLower = BOSS_NAME.toLowerCase();
+  // CHAT MONITOR: LISTEN FOR PUBLIC CHAT COMMANDS FROM ZZYNOX_
+  bot.on('chat', (username, message) => {
+    // Completely ignore anyone who isn't you
+    if (username !== BOSS_NAME) return;
 
-    // TRIGGER A: INCOMING COMMAND RECOGNITION (/tpahere)
-    if (serverMessage.includes(targetLower) && (serverMessage.includes('here') || serverMessage.includes('request'))) {
-      console.log(`[${account.username}] Intercepted direct TPAHERE message from ${BOSS_NAME}. Auto-accepting.`);
-      bot.chat('/tpaccept');
+    // Command 1: You type !tpa in public chat
+    if (message === '!tpa' && !bot.isTeleporting) {
+      console.log(`[${account.username}] Received !tpa command. Sending request to ${BOSS_NAME}...`);
+      bot.chat(`/tpa ${BOSS_NAME}`);
     }
 
-    // TRIGGER B: TELEPORTATION INITIALIZATION DETECTION
+    // Command 2: You type !accept in public chat (if you sent them a /tpahere)
+    if (message === '!accept') {
+      console.log(`[${account.username}] Received !accept command. Processing /tpaccept...`);
+      bot.chat('/tpaccept');
+    }
+  });
+
+  // SYSTEM MESSAGE MONITOR (Handles countdown freezing when successful)
+  bot.on('message', (jsonMsg) => {
+    const serverMessage = jsonMsg.toString().toLowerCase();
+
+    // If any server message confirms a teleport sequence has started
     if ((serverMessage.includes('accepted') || serverMessage.includes('teleporting')) && !bot.isTeleporting) {
-      console.log(`[${account.username}] Teleport confirmed by server. Disabling loop and freezing execution...`);
+      console.log(`[${account.username}] Teleport confirmed by server! Freezing for 8 seconds...`);
       
       bot.isTeleporting = true; 
-      if (tpaLoop) {
-        clearInterval(tpaLoop);
-        tpaLoop = null;
-      }
 
-      // Freeze for 8 seconds (Allows the 5-second server countdown to resolve cleanly)
+      // Freeze for 8 seconds to allow the 5-second server countdown to complete safely
       setTimeout(() => {
         bot.isTeleporting = false;
-        console.log(`[${account.username}] Freeze lift. Bot successfully initialized inside destination zone.`);
+        console.log(`[${account.username}] Freeze lifted. Bot is ready in the AFK zone.`);
       }, 8000);
     }
   });
 
   // Auto-Reconnect Sequence
   bot.on('end', (reason) => {
-    console.log(`[${account.username}] Disconnected from host: (${reason}). Re-queuing stream...`);
-    if (tpaLoop) clearInterval(tpaLoop);
+    console.log(`[${account.username}] Disconnected: (${reason}). Reconnecting in 15s...`);
     clearInterval(afkInterval);
     setTimeout(() => spawnAFKBot(account), 15000);
   });
 
-  bot.on('error', (err) => console.error(`[${account.username}] Critical Stream Error:`, err.message));
+  bot.on('error', (err) => console.error(`[${account.username}] Error:`, err.message));
 }
 
 // Global initialization
 if (accounts.length === 0) {
-  console.error("[System Error] No accounts initialized. Verify environment configuration.");
+  console.error("[System Error] No accounts initialized. Verify variables.");
   process.exit(1);
 } else {
-  console.log(`[System] Deploying ${accounts.length} brute-force TPA nodes targeting user ${BOSS_NAME}...`);
+  console.log(`[System] Deploying ${accounts.length} chat-controlled nodes for ${BOSS_NAME}...`);
   accounts.forEach(spawnAFKBot);
 }
