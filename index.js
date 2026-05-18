@@ -1,14 +1,14 @@
 const mineflayer = require('mineflayer');
 const http = require('http');
 
-// 1. DUMMY WEB SERVER FOR RAILWAY
+// 1. DUMMY WEB SERVER FOR RAILWAY HEALTH CHECKS
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Minecraft Chat-Activated AFK Bots are Online!\n');
+  res.end('Minecraft Text-Parser AFK Bots are Online!\n');
 }).listen(PORT, () => console.log(`[System] Dummy server on port ${PORT}`));
 
-// 2. HARDCODED TARGET ACCOUNT (Must match exactly)
+// 2. HARDCODED TARGET ACCOUNT
 const BOSS_NAME = 'Zzynox_'; 
 
 // 3. ENVIRONMENT CONFIGURATION
@@ -37,10 +37,10 @@ function spawnAFKBot(account) {
   bot.isTeleporting = false; 
 
   bot.once('spawn', () => {
-    console.log(`[${account.username}] Connected to server network.`);
+    console.log(`[${account.username}] Connected to host network.`);
     setTimeout(() => {
       bot.chat(`/login ${account.password}`);
-      console.log(`[${account.username}] Sent /login credentials. Standing by for chat orders...`);
+      console.log(`[${account.username}] Authenticated. Monitoring raw text stream...`);
     }, 2000);
   });
 
@@ -49,57 +49,66 @@ function spawnAFKBot(account) {
     if (bot.entity && !bot.isTeleporting) bot.swingArm('right');
   }, 30000);
 
-  // CHAT MONITOR: LISTEN FOR PUBLIC CHAT COMMANDS FROM ZZYNOX_
-  bot.on('chat', (username, message) => {
-    // Completely ignore anyone who isn't you
-    if (username !== BOSS_NAME) return;
-
-    // Command 1: You type !tpa in public chat
-    if (message === '!tpa' && !bot.isTeleporting) {
-      console.log(`[${account.username}] Received !tpa command. Sending request to ${BOSS_NAME}...`);
-      bot.chat(`/tpa ${BOSS_NAME}`);
-    }
-
-    // Command 2: You type !accept in public chat (if you sent them a /tpahere)
-    if (message === '!accept') {
-      console.log(`[${account.username}] Received !accept command. Processing /tpaccept...`);
-      bot.chat('/tpaccept');
-    }
-  });
-
-  // SYSTEM MESSAGE MONITOR (Handles countdown freezing when successful)
+  // RAW STREAM PARSER (Bypasses Mineflayer's broken format detector)
   bot.on('message', (jsonMsg) => {
-    const serverMessage = jsonMsg.toString().toLowerCase();
+    const rawLine = jsonMsg.toString();
+    const cleanLine = rawLine.toLowerCase().trim();
+    const targetLower = BOSS_NAME.toLowerCase(); // "zzynox_"
 
-    // If any server message confirms a teleport sequence has started
-    if ((serverMessage.includes('accepted') || serverMessage.includes('teleporting')) && !bot.isTeleporting) {
-      console.log(`[${account.username}] Teleport confirmed by server! Freezing for 8 seconds...`);
+    // --- CASE 1: VERIFYING PUBLIC CHAT COMMANDS FROM YOU ---
+    // Checks if the line contains your name followed by the exact trigger command
+    if (cleanLine.includes(targetLower)) {
       
+      // Trigger A: You typed "!tpa" anywhere in your message line
+      if (cleanLine.includes('!tpa') && !bot.isTeleporting) {
+        console.log(`[${account.username}] Intercepted raw !tpa command from line: "${rawLine}"`);
+        bot.chat(`/tpa ${BOSS_NAME}`);
+      }
+
+      // Trigger B: You typed "!accept" anywhere in your message line
+      if (cleanLine.includes('!accept')) {
+        console.log(`[${account.username}] Intercepted raw !accept command.`);
+        bot.chat('/tpaccept');
+      }
+
+      // --- CASE 2: DETECT INCOMING TPA/TPAHERE FROM SERVER ---
+      // Catches custom server strings like "Zzynox_ wants to teleport to you" or "teleport you to them"
+      if ((cleanLine.includes('request') || cleanLine.includes('here') || cleanLine.includes('teleport')) && 
+          !cleanLine.includes('!tpa') && !cleanLine.includes('!accept') && !bot.isTeleporting) {
+        console.log(`[${account.username}] Inbound TPA request signature found. Auto-accepting...`);
+        bot.chat('/tpaccept');
+      }
+    }
+
+    // --- CASE 3: TELEPORT COMPLETED FREEZE DETECTOR ---
+    // Monitors the chat log for server confirmation lines
+    if ((cleanLine.includes('accepted') || cleanLine.includes('teleporting')) && !bot.isTeleporting) {
+      console.log(`[${account.username}] Teleportation state confirmed by server. Freezing bot input...`);
       bot.isTeleporting = true; 
 
-      // Freeze for 8 seconds to allow the 5-second server countdown to complete safely
+      // 8-second freeze to buffer through a 5-second countdown safely
       setTimeout(() => {
         bot.isTeleporting = false;
-        console.log(`[${account.username}] Freeze lifted. Bot is ready in the AFK zone.`);
+        console.log(`[${account.username}] Unfrozen. Bot running normal operations in destination zone.`);
       }, 8000);
     }
   });
 
   // Auto-Reconnect Sequence
   bot.on('end', (reason) => {
-    console.log(`[${account.username}] Disconnected: (${reason}). Reconnecting in 15s...`);
+    console.log(`[${account.username}] Disconnected: (${reason}). Re-queueing in 15s...`);
     clearInterval(afkInterval);
     setTimeout(() => spawnAFKBot(account), 15000);
   });
 
-  bot.on('error', (err) => console.error(`[${account.username}] Error:`, err.message));
+  bot.on('error', (err) => console.error(`[${account.username}] Stream error:`, err.message));
 }
 
 // Global initialization
 if (accounts.length === 0) {
-  console.error("[System Error] No accounts initialized. Verify variables.");
+  console.error("[System Error] Deployment aborted: No account variables found.");
   process.exit(1);
 } else {
-  console.log(`[System] Deploying ${accounts.length} chat-controlled nodes for ${BOSS_NAME}...`);
+  console.log(`[System] Initializing text-parsing nodes targeting ${BOSS_NAME}...`);
   accounts.forEach(spawnAFKBot);
 }
