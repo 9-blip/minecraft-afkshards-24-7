@@ -7,7 +7,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "mineflayer": "^4.20.0",
+    "mineflayer": "^4.27.0",
     "socks-proxy-agent": "^8.0.0"
   }
 }
