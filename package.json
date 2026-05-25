@@ -1,12 +1,13 @@
 {
-  "name": "mc-tpa-afk-bots",
+  "name": "minecraft-afkshards-24-7",
   "version": "1.0.0",
-  "description": "Multi-account 24/7 TPA AFK bots for Railway",
+  "description": "AFK shards proxy cluster",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "mineflayer": "^4.32.0"
+    "mineflayer": "^4.20.0",
+    "socks": "^2.8.3"
   }
-      }
+}
