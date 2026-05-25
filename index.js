@@ -1,146 +1,122 @@
 const mineflayer = require('mineflayer');
 const http = require('http');
-const socks = require('socks').SocksClient;
 
-// 1. DUMMY WEB SERVER FOR RAILWAY HEALTH CHECKS
+// 1. HEALTH CHECK SERVER FOR RAILWAY
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Minecraft Premium Proxy Cluster Running!\n');
-}).listen(PORT, () => console.log(`[System] Dummy server online on port ${PORT}`));
+  res.end('Stealth AFK Cluster Online\n');
+}).listen(PORT);
 
-// 2. TARGET CONFIGURATION
 const BOSS_NAME = 'Zzynox_'; 
 const SERVER_HOST = process.env.SERVER_HOST;
 const SERVER_PORT = parseInt(process.env.SERVER_PORT || '25565', 10);
 
 const accounts = [];
-if (process.env.BOT_1_USER && process.env.BOT_1_PASS) accounts.push({ username: process.env.BOT_1_USER, password: process.env.BOT_1_PASS, proxy: process.env.BOT_1_PROXY });
-if (process.env.BOT_2_USER && process.env.BOT_2_PASS) accounts.push({ username: process.env.BOT_2_USER, password: process.env.BOT_2_PASS, proxy: process.env.BOT_2_PROXY });
-if (process.env.BOT_3_USER && process.env.BOT_3_PASS) accounts.push({ username: process.env.BOT_3_USER, password: process.env.BOT_3_PASS, proxy: process.env.BOT_3_PROXY });
-if (process.env.BOT_4_USER && process.env.BOT_4_PASS) accounts.push({ username: process.env.BOT_4_USER, password: process.env.BOT_4_PASS, proxy: process.env.BOT_4_PROXY });
+if (process.env.BOT_1_USER && process.env.BOT_1_PASS) accounts.push({ username: process.env.BOT_1_USER, password: process.env.BOT_1_PASS });
+if (process.env.BOT_2_USER && process.env.BOT_2_PASS) accounts.push({ username: process.env.BOT_2_USER, password: process.env.BOT_2_PASS });
+if (process.env.BOT_3_USER && process.env.BOT_3_PASS) accounts.push({ username: process.env.BOT_3_USER, password: process.env.BOT_3_PASS });
 
-// 3. ENHANCED MATRIX FABRICATOR
-function spawnAFKBot(account) {
-  console.log(`[System] Routing premium connection matrix for: ${account.username}...`);
+function spawnStealthBot(account) {
+  console.log(`[Humanizer] Initializing realistic handshake for: ${account.username}...`);
 
-  const botOptions = {
+  const bot = mineflayer.createBot({
     host: SERVER_HOST,
     port: SERVER_PORT,
     username: account.username,
     auth: 'offline',
     version: '1.20.4',
-    viewDistance: 'tiny',
-    checkTimeoutInterval: 120000,
-    closeTimeout: 120000,
-    physicsEnabled: true
-  };
-
-  // PARSE ENHANCED PROXY STRINGS (IP:PORT:USER:PASS)
-  if (account.proxy) {
-    try {
-      const proxyParts = account.proxy.split(':');
-      const proxyHost = proxyParts[0];
-      const proxyPort = parseInt(proxyParts[1], 10);
-      const proxyUser = proxyParts[2];
-      const proxyPass = proxyParts[3];
-
-      botOptions.connect = (client) => {
-        const proxyConfig = {
-          proxy: { 
-            host: proxyHost, 
-            port: proxyPort, 
-            type: 5 
-          },
-          command: 'connect',
-          destination: { host: SERVER_HOST, port: SERVER_PORT }
-        };
-
-        // Inject authentication if username and password exist
-        if (proxyUser && proxyPass) {
-          proxyConfig.proxy.userId = proxyUser;
-          proxyConfig.proxy.password = proxyPass;
-        }
-
-        socks.createConnection(proxyConfig, (err, info) => {
-          if (err) {
-            console.error(`[${account.username}] Premium Proxy Error: ${err.message}`);
-            client.emit('error', err);
-            return;
-          }
-          botOptions.socket = info.socket;
-          client.setSocket(info.socket);
-        });
-      };
-      console.log(`[${account.username}] Private Tunnel Bound: ${proxyHost}:${proxyPort}`);
-    } catch (proxyError) {
-      console.error(`[${account.username}] Failed parsing premium proxy structure.`);
+    viewDistance: 'normal', // Changed from tiny to normal to mimic a real client
+    physicsEnabled: true,
+    // Humanized skin settings
+    skinParts: {
+      showCape: true,
+      showJacked: true,
+      showLeftSleeve: true,
+      showRightSleeve: true,
+      showLeftPants: true,
+      showRightPants: true,
+      showHat: true
     }
-  }
+  });
 
-  const bot = mineflayer.createBot(botOptions);
-  bot.isTeleporting = false; 
-  let autoAcceptInterval = null;
+  bot.isTeleporting = false;
+  let loginTimeout = null;
+  let actionInterval = null;
 
   bot.once('spawn', () => {
-    console.log(`[${account.username}] Tunnel established. Entering host network.`);
-    
-    setTimeout(() => {
+    // Human-like physical delay before typing in chat
+    const humanChatDelay = Math.floor(Math.random() * 3000) + 2000;
+    console.log(`[${account.username}] Connected to lobby. Waiting ${humanChatDelay}ms to mimic typing...`);
+
+    loginTimeout = setTimeout(() => {
       bot.chat(`/login ${account.password}`);
       
       setTimeout(() => {
         bot.chat('/maghrebsmp');
-
-        setTimeout(() => {
-          if (autoAcceptInterval) clearInterval(autoAcceptInterval);
-          autoAcceptInterval = setInterval(() => {
-            if (!bot.isTeleporting) bot.chat('/tpaccept');
-          }, 6000);
-        }, 5000);
-      }, 5000);
-    }, 4000);
+        
+        // Activate human-like look/movement simulation
+        startHumanInteractions(bot, account.username);
+      }, Math.floor(Math.random() * 2000) + 3000);
+    }, humanChatDelay);
   });
 
-  // Anti-AFK Swing Action
-  const afkInterval = setInterval(() => {
-    if (bot.entity && !bot.isTeleporting) bot.swingArm('right');
-  }, 30000);
+  // Mimics tiny human behaviors (randomly looking around slightly, shifting, swinging arms)
+  function startHumanInteractions(b, name) {
+    if (actionInterval) clearInterval(actionInterval);
+    
+    actionInterval = setInterval(() => {
+      if (b.entity && !b.isTeleporting) {
+        const decision = Math.random();
+        if (decision < 0.4) {
+          // Look slightly to the left or right randomly
+          const yaw = b.entity.yaw + (Math.random() * 0.4 - 0.2);
+          const pitch = b.entity.pitch + (Math.random() * 0.2 - 0.1);
+          b.look(yaw, pitch);
+        } else if (decision < 0.6) {
+          b.swingArm('right');
+        } else if (decision < 0.7) {
+          // Sneak for a brief moment
+          b.setControlState('sneak', true);
+          setTimeout(() => b.setControlState('sneak', false), 400);
+        }
+      }
+    }, Math.floor(Math.random() * 15000) + 15000); // Trigger every 15-30 seconds
+  }
 
+  // TPA Stream Parsers
   bot.on('message', (jsonMsg) => {
     const cleanLine = jsonMsg.toString().toLowerCase().trim();
-    const targetLower = BOSS_NAME.toLowerCase();
-
-    if (cleanLine.includes(targetLower)) {
-      if (cleanLine.includes('!tpa') && !bot.isTeleporting) bot.chat(`/tpa ${BOSS_NAME}`);
+    if (cleanLine.includes(BOSS_NAME.toLowerCase())) {
+      if (cleanLine.includes('!tpa')) bot.chat(`/tpa ${BOSS_NAME}`);
       if (cleanLine.includes('!accept')) bot.chat('/tpaccept');
     }
-
-    if ((cleanLine.includes('accepted') || cleanLine.includes('teleporting') || cleanLine.includes('countdown')) && !bot.isTeleporting) {
-      bot.isTeleporting = true; 
-      setTimeout(() => { bot.isTeleporting = false; }, 9000);
+    if (cleanLine.includes('accepted') || cleanLine.includes('teleporting')) {
+      bot.isTeleporting = true;
+      setTimeout(() => { bot.isTeleporting = false; }, 8000);
     }
   });
 
   bot.on('end', (reason) => {
-    if (autoAcceptInterval) clearInterval(autoAcceptInterval);
-    clearInterval(afkInterval);
-
-    const randomCooldown = Math.floor(Math.random() * (60000 - 30000 + 1)) + 30000;
-    console.log(`[${account.username}] Socket dropped (${reason}). Re-building tunnel in ${Math.round(randomCooldown / 1000)}s...`);
-    setTimeout(() => spawnAFKBot(account), randomCooldown);
+    if (loginTimeout) clearTimeout(loginTimeout);
+    if (actionInterval) clearInterval(actionInterval);
+    
+    // Generates a massive, completely random delay before reconnecting (30s to 90s)
+    const longCooldown = Math.floor(Math.random() * 60000) + 30000;
+    console.log(`[${account.username}] Disconnected (${reason}). Sleeping for ${Math.round(longCooldown / 1000)}s...`);
+    setTimeout(() => spawnStealthBot(account), longCooldown);
   });
 
   bot.on('error', (err) => {
-    if (err.code !== 'ECONNRESET') console.error(`[${account.username}] Error:`, err.message);
+    if (err.code !== 'ECONNRESET') console.error(`[${account.username}] Matrix Exception:`, err.message);
   });
 }
 
-// Global Initialization
-if (accounts.length === 0) {
-  process.exit(1);
-} else {
-  console.log(`[System] Initializing authenticated cluster sequence...`);
+// Staggered launch routine to prevent anti-bot connection bursts
+if (accounts.length > 0) {
   accounts.forEach((account, index) => {
-    setTimeout(() => { spawnAFKBot(account); }, index * 30000);
+    // Delays each bot's login by a huge random window so they don't look like a cluster
+    const staggeredDelay = index * 45000 + Math.floor(Math.random() * 20000);
+    setTimeout(() => spawnStealthBot(account), staggeredDelay);
   });
-}
+                            }
