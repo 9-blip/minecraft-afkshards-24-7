@@ -1,12 +1,12 @@
 const mineflayer = require('mineflayer');
 const http = require('http');
-const socks = require('socks').SocksClient; // Connects to the socks library
+const socks = require('socks').SocksClient;
 
 // 1. DUMMY WEB SERVER FOR RAILWAY HEALTH CHECKS
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Minecraft Proxy Matrix Cluster is Online!\n');
+  res.end('Minecraft Premium Proxy Cluster Running!\n');
 }).listen(PORT, () => console.log(`[System] Dummy server online on port ${PORT}`));
 
 // 2. TARGET CONFIGURATION
@@ -20,9 +20,9 @@ if (process.env.BOT_2_USER && process.env.BOT_2_PASS) accounts.push({ username: 
 if (process.env.BOT_3_USER && process.env.BOT_3_PASS) accounts.push({ username: process.env.BOT_3_USER, password: process.env.BOT_3_PASS, proxy: process.env.BOT_3_PROXY });
 if (process.env.BOT_4_USER && process.env.BOT_4_PASS) accounts.push({ username: process.env.BOT_4_USER, password: process.env.BOT_4_PASS, proxy: process.env.BOT_4_PROXY });
 
-// 3. CORE MATRIX FABRICATOR
+// 3. ENHANCED MATRIX FABRICATOR
 function spawnAFKBot(account) {
-  console.log(`[System] Routing connection matrix for: ${account.username}...`);
+  console.log(`[System] Routing premium connection matrix for: ${account.username}...`);
 
   const botOptions = {
     host: SERVER_HOST,
@@ -36,21 +36,35 @@ function spawnAFKBot(account) {
     physicsEnabled: true
   };
 
-  // IF A PROXY VARIABLE EXISTS, INJECT NETWORK TUNNEL HOOKS
+  // PARSE ENHANCED PROXY STRINGS (IP:PORT:USER:PASS)
   if (account.proxy) {
     try {
       const proxyParts = account.proxy.split(':');
       const proxyHost = proxyParts[0];
       const proxyPort = parseInt(proxyParts[1], 10);
+      const proxyUser = proxyParts[2];
+      const proxyPass = proxyParts[3];
 
       botOptions.connect = (client) => {
-        socks.createConnection({
-          proxy: { host: proxyHost, port: proxyPort, type: 5 }, // type 5 = SOCKS5
+        const proxyConfig = {
+          proxy: { 
+            host: proxyHost, 
+            port: proxyPort, 
+            type: 5 
+          },
           command: 'connect',
           destination: { host: SERVER_HOST, port: SERVER_PORT }
-        }, (err, info) => {
+        };
+
+        // Inject authentication if username and password exist
+        if (proxyUser && proxyPass) {
+          proxyConfig.proxy.userId = proxyUser;
+          proxyConfig.proxy.password = proxyPass;
+        }
+
+        socks.createConnection(proxyConfig, (err, info) => {
           if (err) {
-            console.error(`[${account.username}] Proxy Gateway Error: ${err.message}`);
+            console.error(`[${account.username}] Premium Proxy Error: ${err.message}`);
             client.emit('error', err);
             return;
           }
@@ -58,9 +72,9 @@ function spawnAFKBot(account) {
           client.setSocket(info.socket);
         });
       };
-      console.log(`[${account.username}] Security Proxy Linked: ${proxyHost}:${proxyPort}`);
+      console.log(`[${account.username}] Private Tunnel Bound: ${proxyHost}:${proxyPort}`);
     } catch (proxyError) {
-      console.error(`[${account.username}] Failed parsing proxy string structure.`);
+      console.error(`[${account.username}] Failed parsing premium proxy structure.`);
     }
   }
 
@@ -69,7 +83,7 @@ function spawnAFKBot(account) {
   let autoAcceptInterval = null;
 
   bot.once('spawn', () => {
-    console.log(`[${account.username}] Stream authenticated via tunnel.`);
+    console.log(`[${account.username}] Tunnel established. Entering host network.`);
     
     setTimeout(() => {
       bot.chat(`/login ${account.password}`);
@@ -82,7 +96,6 @@ function spawnAFKBot(account) {
           autoAcceptInterval = setInterval(() => {
             if (!bot.isTeleporting) bot.chat('/tpaccept');
           }, 6000);
-          
         }, 5000);
       }, 5000);
     }, 4000);
@@ -108,13 +121,12 @@ function spawnAFKBot(account) {
     }
   });
 
-  // Cool-down Reconnect Routine
   bot.on('end', (reason) => {
     if (autoAcceptInterval) clearInterval(autoAcceptInterval);
     clearInterval(afkInterval);
 
     const randomCooldown = Math.floor(Math.random() * (60000 - 30000 + 1)) + 30000;
-    console.log(`[${account.username}] Connection dropped (${reason}). Re-routing stream in ${Math.round(randomCooldown / 1000)}s...`);
+    console.log(`[${account.username}] Socket dropped (${reason}). Re-building tunnel in ${Math.round(randomCooldown / 1000)}s...`);
     setTimeout(() => spawnAFKBot(account), randomCooldown);
   });
 
@@ -127,8 +139,8 @@ function spawnAFKBot(account) {
 if (accounts.length === 0) {
   process.exit(1);
 } else {
-  console.log(`[System] Initializing stealth cluster sequence...`);
+  console.log(`[System] Initializing authenticated cluster sequence...`);
   accounts.forEach((account, index) => {
     setTimeout(() => { spawnAFKBot(account); }, index * 30000);
   });
-         }
+}
