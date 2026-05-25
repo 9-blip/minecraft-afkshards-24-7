@@ -8,6 +8,6 @@
   },
   "dependencies": {
     "mineflayer": "^4.20.0",
-    "socks": "^2.8.3"
+    "socks": "^8.0.0"
   }
 }
